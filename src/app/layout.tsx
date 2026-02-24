@@ -9,9 +9,9 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "CoupleFit Race — 双人减脂马拉松",
+  title: "TogetherFit Race — 多人减脂马拉松",
   description:
-    "带有游戏化竞赛性质的双人体重打卡 Web App，一起变更好！",
+    "带有游戏化竞赛性质的多人体重打卡 Web App，一起变更好！",
 };
 
 export default function RootLayout({
