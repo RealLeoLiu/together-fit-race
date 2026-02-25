@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-import type { LeaderboardPlayer, User } from "@/lib/types";
+import type { LeaderboardPlayer, User, CheckIn } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -16,6 +16,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Scale, Trophy, Flame, Sparkles, Crown } from "lucide-react";
+import { WeightTrendChart } from "@/components/weight-trend-chart";
 
 // ──────────────────────────────────────
 // 排行榜色板
@@ -61,12 +62,15 @@ function Header() {
 // ──────────────────────────────────────
 function CheckInCard({
     users,
+    selectedUserId,
+    onUserChange,
     onCheckInSuccess,
 }: {
     users: Pick<User, "id" | "name">[];
+    selectedUserId: string;
+    onUserChange: (userId: string) => void;
     onCheckInSuccess: () => void;
 }) {
-    const [selectedUserId, setSelectedUserId] = useState("");
     const [weight, setWeight] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -117,7 +121,7 @@ function CheckInCard({
 
             <div className="space-y-4">
                 {/* 用户选择 */}
-                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <Select value={selectedUserId} onValueChange={onUserChange}>
                     <SelectTrigger className="h-12 rounded-2xl bg-gray-50/80 border-gray-200/60">
                         <SelectValue placeholder="选择打卡用户..." />
                     </SelectTrigger>
@@ -207,8 +211,8 @@ function Leaderboard({ players }: { players: LeaderboardPlayer[] }) {
                         <div
                             key={player.userId}
                             className={`space-y-2 rounded-2xl p-3 transition-all duration-300 ${isFirst
-                                    ? "bg-gradient-to-br from-amber-50/80 to-orange-50/60 ring-1 ring-amber-200/50"
-                                    : "hover:bg-gray-50/50"
+                                ? "bg-gradient-to-br from-amber-50/80 to-orange-50/60 ring-1 ring-amber-200/50"
+                                : "hover:bg-gray-50/50"
                                 }`}
                         >
                             {/* 名次 + 信息行 */}
@@ -216,8 +220,8 @@ function Leaderboard({ players }: { players: LeaderboardPlayer[] }) {
                                 <div className="flex items-center gap-2.5">
                                     <div
                                         className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-extrabold ${isFirst
-                                                ? "bg-gradient-to-br from-amber-400 to-orange-400 text-white shadow-sm shadow-amber-300/40"
-                                                : "bg-gray-100 text-gray-400"
+                                            ? "bg-gradient-to-br from-amber-400 to-orange-400 text-white shadow-sm shadow-amber-300/40"
+                                            : "bg-gray-100 text-gray-400"
                                             }`}
                                     >
                                         {isFirst ? <Crown className="w-4 h-4" /> : idx + 1}
@@ -285,6 +289,13 @@ export function HomeClient({
 }: HomeClientProps) {
     const router = useRouter();
 
+    // ── 提升的用户选择状态 ──
+    const [selectedUserId, setSelectedUserId] = useState("");
+
+    // ── 趋势图数据 ──
+    const [trendData, setTrendData] = useState<CheckIn[]>([]);
+    const [isLoadingTrend, setIsLoadingTrend] = useState(false);
+
     // 服务端错误在首次渲染时通过 toast 展示
     useEffect(() => {
         if (serverError) {
@@ -292,16 +303,70 @@ export function HomeClient({
         }
     }, [serverError]);
 
+    // ── 联级响应：切换用户时查询全部历史打卡 ──
+    useEffect(() => {
+        if (!selectedUserId) {
+            setTrendData([]);
+            return;
+        }
+
+        let cancelled = false;
+        async function fetchTrend() {
+            setIsLoadingTrend(true);
+            try {
+                const { data, error } = await supabase
+                    .from("check_ins")
+                    .select("*")
+                    .eq("user_id", selectedUserId)
+                    .order("record_date", { ascending: true });
+
+                if (error) throw new Error(error.message);
+                if (!cancelled) {
+                    setTrendData(data ?? []);
+                }
+            } catch (err: unknown) {
+                const message =
+                    err instanceof Error ? err.message : "获取趋势数据失败";
+                toast.error(message);
+                if (!cancelled) setTrendData([]);
+            } finally {
+                if (!cancelled) setIsLoadingTrend(false);
+            }
+        }
+
+        fetchTrend();
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedUserId]);
+
     const handleCheckInSuccess = useCallback(() => {
         // 通过 router.refresh() 触发 Server Component 重新获取数据
         router.refresh();
-    }, [router]);
+        // 同时刷新趋势图数据
+        if (selectedUserId) {
+            supabase
+                .from("check_ins")
+                .select("*")
+                .eq("user_id", selectedUserId)
+                .order("record_date", { ascending: true })
+                .then(({ data, error }) => {
+                    if (!error && data) setTrendData(data);
+                });
+        }
+    }, [router, selectedUserId]);
 
     return (
         <div className="pb-6">
             <Header />
-            <CheckInCard users={initialUsers} onCheckInSuccess={handleCheckInSuccess} />
+            <CheckInCard
+                users={initialUsers}
+                selectedUserId={selectedUserId}
+                onUserChange={setSelectedUserId}
+                onCheckInSuccess={handleCheckInSuccess}
+            />
             <Leaderboard players={initialPlayers} />
+            <WeightTrendChart checkIns={trendData} isLoading={isLoadingTrend} />
         </div>
     );
 }
