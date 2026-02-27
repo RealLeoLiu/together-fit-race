@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import type { LeaderboardPlayer, User } from "@/lib/types";
 import { HomeClient } from "@/components/home-client";
 
+
 // 头像 Emoji 池，按顺序分配
 const EMOJI_POOL = ["🧑", "👩", "🧔", "👧", "🐻", "🐰", "🦊", "🐱"];
 
@@ -15,7 +16,7 @@ async function fetchLeaderboard(): Promise<LeaderboardPlayer[]> {
   // 1. 获取所有用户
   const { data: users, error: usersErr } = await supabase
     .from("users")
-    .select("id, name")
+    .select("id, name, avatar_url")
     .order("created_at", { ascending: true });
 
   if (usersErr) throw new Error(`获取用户失败: ${usersErr.message}`);
@@ -41,7 +42,7 @@ async function fetchLeaderboard(): Promise<LeaderboardPlayer[]> {
 
   // 3. 组装排行榜
   const players: LeaderboardPlayer[] = users
-    .map((user: Pick<User, "id" | "name">, idx: number) => {
+    .map((user: Pick<User, "id" | "name" | "avatar_url">, idx: number) => {
       const goal = goals.find((g: { user_id: string }) => g.user_id === user.id);
       const latestCheckIn = checkIns.find((c: { user_id: string }) => c.user_id === user.id);
 
@@ -56,6 +57,7 @@ async function fetchLeaderboard(): Promise<LeaderboardPlayer[]> {
       return {
         userId: user.id,
         name: user.name,
+        avatar_url: user.avatar_url ?? null,
         emoji: EMOJI_POOL[idx % EMOJI_POOL.length],
         startWeight,
         currentWeight,
@@ -69,10 +71,10 @@ async function fetchLeaderboard(): Promise<LeaderboardPlayer[]> {
   return players;
 }
 
-async function fetchUsers(): Promise<Pick<User, "id" | "name">[]> {
+async function fetchUsers(): Promise<Pick<User, "id" | "name" | "avatar_url">[]> {
   const { data, error } = await supabase
     .from("users")
-    .select("id, name")
+    .select("id, name, avatar_url")
     .order("created_at", { ascending: true });
 
   if (error) throw new Error(`获取用户列表失败: ${error.message}`);
@@ -83,7 +85,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   let players: LeaderboardPlayer[] = [];
-  let users: Pick<User, "id" | "name">[] = [];
+  let users: Pick<User, "id" | "name" | "avatar_url">[] = [];
   let serverError: string | null = null;
 
   try {

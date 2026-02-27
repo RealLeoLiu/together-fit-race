@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Scale, Trophy, Flame, Sparkles, Crown } from "lucide-react";
 import { WeightTrendChart } from "@/components/weight-trend-chart";
+import { AvatarUploader } from "@/components/avatar-uploader";
 
 // ──────────────────────────────────────
 // 排行榜色板
@@ -33,7 +34,7 @@ const LEADERBOARD_COLORS = [
 // ──────────────────────────────────────
 interface HomeClientProps {
     initialPlayers: LeaderboardPlayer[];
-    initialUsers: Pick<User, "id" | "name">[];
+    initialUsers: Pick<User, "id" | "name" | "avatar_url">[];
     serverError: string | null;
 }
 
@@ -66,7 +67,7 @@ function CheckInCard({
     onUserChange,
     onCheckInSuccess,
 }: {
-    users: Pick<User, "id" | "name">[];
+    users: Pick<User, "id" | "name" | "avatar_url">[];
     selectedUserId: string;
     onUserChange: (userId: string) => void;
     onCheckInSuccess: () => void;
@@ -174,6 +175,12 @@ function CheckInCard({
 // 排行榜 (Leaderboard)
 // ──────────────────────────────────────
 function Leaderboard({ players }: { players: LeaderboardPlayer[] }) {
+    const [localAvatars, setLocalAvatars] = useState<Record<string, string>>({});
+
+    const handleAvatarUpdated = (userId: string, newUrl: string) => {
+        setLocalAvatars(prev => ({ ...prev, [userId]: newUrl }));
+    };
+
     if (players.length === 0) {
         return (
             <section className="mx-5 mt-5 mb-8 p-8 bg-white rounded-3xl shadow-sm border border-gray-100/80 text-center">
@@ -219,15 +226,20 @@ function Leaderboard({ players }: { players: LeaderboardPlayer[] }) {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2.5">
                                     <div
-                                        className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-extrabold ${isFirst
+                                        className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-extrabold flex-shrink-0 ${isFirst
                                             ? "bg-gradient-to-br from-amber-400 to-orange-400 text-white shadow-sm shadow-amber-300/40"
                                             : "bg-gray-100 text-gray-400"
                                             }`}
                                     >
                                         {isFirst ? <Crown className="w-4 h-4" /> : idx + 1}
                                     </div>
-                                    <span className="text-xl">{player.emoji}</span>
-                                    <span className="font-bold text-gray-700 text-sm">
+                                    <AvatarUploader
+                                        userId={player.userId}
+                                        currentAvatarUrl={localAvatars[player.userId] ?? player.avatar_url}
+                                        userName={player.emoji}
+                                        onAvatarUpdated={(newUrl) => handleAvatarUpdated(player.userId, newUrl)}
+                                    />
+                                    <span className="font-bold text-gray-700 text-sm ml-1 truncate">
                                         {player.name}
                                     </span>
                                 </div>
@@ -296,6 +308,29 @@ export function HomeClient({
     const [trendData, setTrendData] = useState<CheckIn[]>([]);
     const [isLoadingTrend, setIsLoadingTrend] = useState(false);
 
+    // 加载全部历史打卡用于“竞速趋势图”
+    const fetchAllTrends = useCallback(async () => {
+        setIsLoadingTrend(true);
+        try {
+            const { data, error } = await supabase
+                .from("check_ins")
+                .select("*")
+                .order("record_date", { ascending: true });
+
+            if (error) throw new Error(error.message);
+            setTrendData(data ?? []);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "获取竞速数据失败";
+            toast.error(message);
+        } finally {
+            setIsLoadingTrend(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchAllTrends();
+    }, [fetchAllTrends]);
+
     // 服务端错误在首次渲染时通过 toast 展示
     useEffect(() => {
         if (serverError) {
@@ -303,58 +338,13 @@ export function HomeClient({
         }
     }, [serverError]);
 
-    // ── 联级响应：切换用户时查询全部历史打卡 ──
-    useEffect(() => {
-        if (!selectedUserId) {
-            setTrendData([]);
-            return;
-        }
-
-        let cancelled = false;
-        async function fetchTrend() {
-            setIsLoadingTrend(true);
-            try {
-                const { data, error } = await supabase
-                    .from("check_ins")
-                    .select("*")
-                    .eq("user_id", selectedUserId)
-                    .order("record_date", { ascending: true });
-
-                if (error) throw new Error(error.message);
-                if (!cancelled) {
-                    setTrendData(data ?? []);
-                }
-            } catch (err: unknown) {
-                const message =
-                    err instanceof Error ? err.message : "获取趋势数据失败";
-                toast.error(message);
-                if (!cancelled) setTrendData([]);
-            } finally {
-                if (!cancelled) setIsLoadingTrend(false);
-            }
-        }
-
-        fetchTrend();
-        return () => {
-            cancelled = true;
-        };
-    }, [selectedUserId]);
-
+    // ── 联级刷新 ──
     const handleCheckInSuccess = useCallback(() => {
         // 通过 router.refresh() 触发 Server Component 重新获取数据
         router.refresh();
-        // 同时刷新趋势图数据
-        if (selectedUserId) {
-            supabase
-                .from("check_ins")
-                .select("*")
-                .eq("user_id", selectedUserId)
-                .order("record_date", { ascending: true })
-                .then(({ data, error }) => {
-                    if (!error && data) setTrendData(data);
-                });
-        }
-    }, [router, selectedUserId]);
+        // 刷新竞速趋势图
+        fetchAllTrends();
+    }, [router, fetchAllTrends]);
 
     return (
         <div className="pb-6">
@@ -366,7 +356,11 @@ export function HomeClient({
                 onCheckInSuccess={handleCheckInSuccess}
             />
             <Leaderboard players={initialPlayers} />
-            <WeightTrendChart checkIns={trendData} isLoading={isLoadingTrend} />
+            <WeightTrendChart
+                checkIns={trendData}
+                users={initialUsers}
+                isLoading={isLoadingTrend}
+            />
         </div>
     );
 }

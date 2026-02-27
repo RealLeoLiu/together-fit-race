@@ -1,14 +1,14 @@
-"use client";
-
-import type { CheckIn } from "@/lib/types";
+import type { CheckIn, User } from "@/lib/types";
 import { TrendingUp } from "lucide-react";
 import {
-    AreaChart,
-    Area,
+    LineChart,
+    Line,
     XAxis,
     YAxis,
     Tooltip,
     ResponsiveContainer,
+    Legend,
+    CartesianGrid,
 } from "recharts";
 
 // ──────────────────────────────────────
@@ -22,18 +22,23 @@ function formatDateLabel(dateStr: string): string {
 }
 
 // ──────────────────────────────────────
-// 图表数据点类型
+// 图表颜色池
 // ──────────────────────────────────────
-interface TrendDataPoint {
-    date: string;
-    weight: number;
-}
+const USER_COLORS = [
+    "#8B5CF6", // Violet
+    "#10B981", // Emerald
+    "#F43F5E", // Rose
+    "#0EA5E9", // Sky
+    "#F59E0B", // Amber
+    "#6366F1", // Indigo
+];
 
 // ──────────────────────────────────────
 // Props
 // ──────────────────────────────────────
 interface WeightTrendChartProps {
     checkIns: CheckIn[];
+    users: Pick<User, "id" | "name" | "avatar_url">[];
     isLoading: boolean;
 }
 
@@ -43,23 +48,32 @@ interface WeightTrendChartProps {
 function CustomTooltip({
     active,
     payload,
-}: {
-    active?: boolean;
-    payload?: { value: number; payload: TrendDataPoint }[];
-    label?: string;
-}) {
+    label,
+}: any) {
     if (!active || !payload || payload.length === 0) return null;
 
-    const point = payload[0];
     return (
-        <div className="rounded-2xl bg-white/95 backdrop-blur-sm border border-purple-100
-                        px-4 py-2.5 shadow-lg shadow-purple-500/10">
-            <p className="text-xs text-gray-400 font-medium mb-0.5">
-                {point.payload.date}
+        <div className="rounded-2xl bg-white/95 backdrop-blur-sm border border-gray-100
+                        px-4 py-3 shadow-xl shadow-gray-200/50 min-w-[140px]">
+            <p className="text-xs text-gray-400 font-bold mb-2 pb-1 border-b border-gray-50 uppercase tracking-wider">
+                {label}
             </p>
-            <p className="text-lg font-extrabold text-purple-600">
-                {point.value} <span className="text-xs font-semibold text-gray-400">kg</span>
-            </p>
+            <div className="space-y-2">
+                {payload.map((entry: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                            <div
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: entry.color }}
+                            />
+                            <span className="text-sm font-bold text-gray-600">{entry.name}</span>
+                        </div>
+                        <span className="text-sm font-extrabold text-gray-800">
+                            {entry.value} <span className="text-[10px] text-gray-400">kg</span>
+                        </span>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
@@ -67,110 +81,144 @@ function CustomTooltip({
 // ──────────────────────────────────────
 // WeightTrendChart 组件
 // ──────────────────────────────────────
-export function WeightTrendChart({ checkIns, isLoading }: WeightTrendChartProps) {
-    // 将 CheckIn[] 转为图表数据（已按 record_date ASC 排序）
-    const data: TrendDataPoint[] = checkIns.map((c) => ({
-        date: formatDateLabel(c.record_date),
-        weight: Number(c.record_weight),
-    }));
+export function WeightTrendChart({ checkIns, users, isLoading }: WeightTrendChartProps) {
+    // 1. 数据重组：按日期分组
+    // 目标格式: [ { date: '02/27', 'User A': 70, 'User B': 80 }, ... ]
+    const dataMap: Record<string, any> = {};
 
-    // 计算 Y 轴域：上下各留 1kg 的 padding
-    const weights = data.map((d) => d.weight);
-    const yMin = weights.length > 0 ? Math.floor(Math.min(...weights) - 1) : 0;
-    const yMax = weights.length > 0 ? Math.ceil(Math.max(...weights) + 1) : 100;
+    // 获取所有涉及的日期并排序
+    const dates = Array.from(new Set(checkIns.map(c => c.record_date))).sort();
 
-    // 空状态 / 加载态
-    const showEmpty = !isLoading && data.length <= 1;
+    dates.forEach(dateStr => {
+        const label = formatDateLabel(dateStr);
+        dataMap[label] = { date: label };
+    });
+
+    checkIns.forEach(c => {
+        const label = formatDateLabel(c.record_date);
+        const user = users.find(u => u.id === c.user_id);
+        if (user && dataMap[label]) {
+            dataMap[label][user.name] = Number(c.record_weight);
+        }
+    });
+
+    const chartData = Object.values(dataMap);
+
+    // 2. 计算 Y 轴域
+    const weights = checkIns.map(c => Number(c.record_weight));
+    const yMin = weights.length > 0 ? Math.floor(Math.min(...weights) - 2) : 0;
+    const yMax = weights.length > 0 ? Math.ceil(Math.max(...weights) + 2) : 100;
+
+    // 3. 过滤出有数据的用户
+    const activeUsers = users.filter(u =>
+        checkIns.some(c => c.user_id === u.id)
+    );
+
+    const showEmpty = !isLoading && chartData.length === 0;
 
     return (
         <section className="mx-5 mt-5 mb-8 p-6 bg-white rounded-3xl shadow-sm border border-gray-100/80">
             {/* 标题行 */}
-            <div className="flex items-center gap-2 mb-5">
-                <div className="w-9 h-9 rounded-2xl bg-purple-50 flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-purple-500" />
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-indigo-500" />
+                    </div>
+                    <h2 className="text-lg font-bold text-gray-700">多人竞速趋势</h2>
                 </div>
-                <h2 className="text-lg font-bold text-gray-700">体重趋势</h2>
             </div>
 
             {/* 加载中 */}
             {isLoading && (
-                <div className="flex items-center justify-center py-12">
-                    <div className="w-6 h-6 border-2 border-purple-200 border-t-purple-500
+                <div className="flex items-center justify-center py-20">
+                    <div className="w-8 h-8 border-3 border-indigo-100 border-t-indigo-500
                                     rounded-full animate-spin" />
                 </div>
             )}
 
             {/* 空状态 */}
             {showEmpty && (
-                <div className="flex items-center justify-center py-12">
-                    <p className="text-sm text-gray-400 font-semibold text-center">
-                        继续打卡，解锁你的专属多巴胺趋势曲线 ✨
+                <div className="flex flex-col items-center justify-center py-12 px-4 italic">
+                    <p className="text-4xl mb-3">🏁</p>
+                    <p className="text-sm text-gray-400 font-semibold text-center leading-relaxed">
+                        还没有打卡数据，快去提交体重<br />开启多人同框竞速吧！
                     </p>
                 </div>
             )}
 
             {/* 图表 */}
-            {!isLoading && data.length >= 2 && (
-                <div className="w-full h-56">
+            {!isLoading && chartData.length > 0 && (
+                <div className="w-full h-72 -ml-4">
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart
-                            data={data}
-                            margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+                        <LineChart
+                            data={chartData}
+                            margin={{ top: 20, right: 20, left: 0, bottom: 0 }}
                         >
-                            {/* 渐变定义 */}
-                            <defs>
-                                <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
-                                </linearGradient>
-                            </defs>
-
+                            <CartesianGrid
+                                vertical={false}
+                                strokeDasharray="3 3"
+                                stroke="#f0f0f0"
+                            />
                             <XAxis
                                 dataKey="date"
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: 11, fill: "#b0b0b0", fontWeight: 500 }}
-                                dy={8}
+                                tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 600 }}
+                                dy={10}
                             />
                             <YAxis
                                 domain={[yMin, yMax]}
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: 11, fill: "#b0b0b0", fontWeight: 500 }}
-                                dx={-4}
-                                tickCount={5}
+                                tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 600 }}
+                                tickCount={6}
+                                hide={false}
                             />
                             <Tooltip
                                 content={<CustomTooltip />}
                                 cursor={{
-                                    stroke: "#c4b5fd",
-                                    strokeWidth: 1,
-                                    strokeDasharray: "4 4",
-                                }}
-                            />
-                            <Area
-                                type="monotone"
-                                dataKey="weight"
-                                stroke="#8b5cf6"
-                                strokeWidth={2.5}
-                                fill="url(#trendFill)"
-                                dot={{
-                                    r: 4,
-                                    fill: "#ffffff",
-                                    stroke: "#8b5cf6",
+                                    stroke: "#e2e8f0",
                                     strokeWidth: 2,
                                 }}
-                                activeDot={{
-                                    r: 6,
-                                    fill: "#8b5cf6",
-                                    stroke: "#ffffff",
-                                    strokeWidth: 2.5,
+                            />
+                            <Legend
+                                verticalAlign="top"
+                                align="right"
+                                iconType="circle"
+                                wrapperStyle={{
+                                    paddingBottom: "20px",
+                                    fontSize: "12px",
+                                    fontWeight: "bold",
+                                    color: "#64748b"
                                 }}
                             />
-                        </AreaChart>
+                            {activeUsers.map((user, idx) => (
+                                <Line
+                                    key={user.id}
+                                    type="monotone"
+                                    dataKey={user.name}
+                                    name={user.name}
+                                    stroke={USER_COLORS[idx % USER_COLORS.length]}
+                                    strokeWidth={3}
+                                    dot={{
+                                        r: 4,
+                                        strokeWidth: 2,
+                                        fill: "#fff"
+                                    }}
+                                    activeDot={{
+                                        r: 6,
+                                        strokeWidth: 0,
+                                        fill: USER_COLORS[idx % USER_COLORS.length]
+                                    }}
+                                    connectNulls={true}
+                                    animationDuration={1500}
+                                />
+                            ))}
+                        </LineChart>
                     </ResponsiveContainer>
                 </div>
             )}
         </section>
     );
 }
+

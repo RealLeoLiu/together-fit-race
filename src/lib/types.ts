@@ -32,6 +32,7 @@ export interface LeaderboardPlayer {
     userId: string;
     name: string;
     emoji: string;
+    avatar_url: string | null;
     startWeight: number;
     currentWeight: number;
     goalWeight: number;
