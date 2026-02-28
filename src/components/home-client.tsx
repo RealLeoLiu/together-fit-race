@@ -359,6 +359,7 @@ export function HomeClient({
             <WeightTrendChart
                 checkIns={trendData}
                 users={initialUsers}
+                players={initialPlayers}
                 isLoading={isLoadingTrend}
             />
         </div>
