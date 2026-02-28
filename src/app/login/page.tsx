@@ -28,7 +28,7 @@ export default function LoginPage() {
                     setIsLoading(false);
                     return;
                 }
-                const { error } = await supabase.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
                     options: {
@@ -38,6 +38,20 @@ export default function LoginPage() {
                     },
                 });
                 if (error) throw error;
+
+                // Sync the newly created auth user to the public.users business table
+                if (data.user) {
+                    const { error: insertError } = await supabase.from("users").insert({
+                        auth_id: data.user.id,
+                        name: name,
+                    });
+
+                    if (insertError) {
+                        console.error("Failed to provision user profile:", insertError);
+                        // We don't throw here to avoid blocking the login, 
+                        // but ideally we should retry or handle this gracefully.
+                    }
+                }
                 toast.success("注册成功！正在为您登录...");
                 router.push("/");
                 router.refresh(); // Force a refresh to update the server session

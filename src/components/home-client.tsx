@@ -15,7 +15,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Scale, Trophy, Flame, Sparkles, Crown } from "lucide-react";
+import { Scale, Trophy, Flame, Sparkles, Crown, Settings2, X, Target } from "lucide-react";
 import { WeightTrendChart } from "@/components/weight-trend-chart";
 import { AvatarUploader } from "@/components/avatar-uploader";
 
@@ -60,6 +60,158 @@ function Header() {
 }
 
 // ──────────────────────────────────────
+// 个人目标设置弹窗 (Goal Setting Modal)
+// ──────────────────────────────────────
+function GoalSettingModal({
+    isOpen,
+    onClose,
+    userId,
+    onSuccess
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    userId: string;
+    onSuccess: () => void;
+}) {
+    const supabase = createClient();
+    const [initialWeight, setInitialWeight] = useState("");
+    const [goalWeight, setGoalWeight] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [isFetching, setIsFetching] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const fetchGoal = async () => {
+            setIsFetching(true);
+            const { data, error } = await supabase
+                .from("goals")
+                .select("*")
+                .eq("user_id", userId)
+                .single();
+
+            if (data) {
+                setInitialWeight(String(data.current_weight));
+                setGoalWeight(String(data.goal_weight));
+            }
+            setIsFetching(false);
+        };
+        fetchGoal();
+    }, [isOpen, userId, supabase]);
+
+    if (!isOpen) return null;
+
+    const handleSave = async () => {
+        const initial = parseFloat(initialWeight);
+        const goal = parseFloat(goalWeight);
+
+        if (isNaN(initial) || isNaN(goal) || initial <= 0 || goal <= 0) {
+            toast.error("请输入有效的体重数值");
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            // Check if goal exists since user_id might not have a UNIQUE constraint
+            const { data: existingGoal } = await supabase
+                .from("goals")
+                .select("id")
+                .eq("user_id", userId)
+                .single();
+
+            let targetError;
+
+            if (existingGoal) {
+                const { error } = await supabase
+                    .from("goals")
+                    .update({
+                        current_weight: initial,
+                        goal_weight: goal,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq("user_id", userId);
+                targetError = error;
+            } else {
+                const { error } = await supabase
+                    .from("goals")
+                    .insert({
+                        user_id: userId,
+                        current_weight: initial,
+                        goal_weight: goal,
+                    });
+                targetError = error;
+            }
+
+            if (targetError) throw new Error(targetError.message);
+
+            toast.success("目标设置成功！");
+            onSuccess();
+            onClose();
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "保存失败";
+            toast.error(message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-xl bg-violet-100 flex items-center justify-center">
+                                <Target className="w-4 h-4 text-violet-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-800">设置减重目标</h3>
+                        </div>
+                        <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {isFetching ? (
+                        <div className="py-8 text-center text-gray-400 text-sm animate-pulse">加载中...</div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 mb-1 ml-1 uppercase tracking-wider">初始体重 (kg)</label>
+                                <Input
+                                    type="number"
+                                    placeholder="85.0"
+                                    value={initialWeight}
+                                    onChange={e => setInitialWeight(e.target.value)}
+                                    className="h-12 rounded-2xl bg-gray-50/50"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 mb-1 ml-1 uppercase tracking-wider">目标体重 (kg)</label>
+                                <Input
+                                    type="number"
+                                    placeholder="65.0"
+                                    value={goalWeight}
+                                    onChange={e => setGoalWeight(e.target.value)}
+                                    className="h-12 rounded-2xl bg-gray-50/50"
+                                />
+                            </div>
+
+                            <Button
+                                onClick={handleSave}
+                                disabled={isLoading}
+                                className="w-full h-12 mt-4 rounded-xl font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-md shadow-violet-200"
+                            >
+                                {isLoading ? "保存中..." : "保存目标"}
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ──────────────────────────────────────
 // 个人名片 (User Profile Card)
 // ──────────────────────────────────────
 function UserProfileCard({
@@ -71,6 +223,8 @@ function UserProfileCard({
     onSignOut: () => void;
     onAvatarUpdated: () => void;
 }) {
+    const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+
     return (
         <section className="w-full bg-white rounded-3xl shadow-sm p-6 border border-gray-100/80">
             <div className="flex items-center justify-between">
@@ -100,15 +254,37 @@ function UserProfileCard({
                     </div>
                 </div>
 
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onSignOut}
-                    className="h-9 px-4 rounded-full text-xs text-gray-400 hover:text-red-400 hover:bg-red-50 transition-all font-semibold border border-transparent hover:border-red-100"
-                >
-                    退出
-                </Button>
+                <div className="flex items-center gap-1">
+                    {user && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsGoalModalOpen(true)}
+                            className="w-9 h-9 rounded-full text-gray-400 hover:text-violet-500 hover:bg-violet-50 transition-all"
+                            aria-label="设置目标"
+                        >
+                            <Settings2 className="w-4 h-4" />
+                        </Button>
+                    )}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onSignOut}
+                        className="h-9 px-4 rounded-full text-xs text-gray-400 hover:text-red-400 hover:bg-red-50 transition-all font-semibold border border-transparent hover:border-red-100"
+                    >
+                        退出
+                    </Button>
+                </div>
             </div>
+
+            {user && (
+                <GoalSettingModal
+                    isOpen={isGoalModalOpen}
+                    onClose={() => setIsGoalModalOpen(false)}
+                    userId={user.id}
+                    onSuccess={onAvatarUpdated} // Reuse refresh trigger
+                />
+            )}
         </section>
     );
 }
