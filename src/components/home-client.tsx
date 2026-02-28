@@ -65,23 +65,32 @@ function Header() {
 function UserProfileCard({
     user,
     onSignOut,
+    onAvatarUpdated,
 }: {
     user: Pick<User, "id" | "name" | "avatar_url"> | null;
     onSignOut: () => void;
+    onAvatarUpdated: () => void;
 }) {
     return (
         <section className="w-full bg-white rounded-3xl shadow-sm p-6 border border-gray-100/80">
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    {user?.avatar_url ? (
-                        <img
-                            src={user.avatar_url}
-                            alt={user.name}
-                            className="w-12 h-12 rounded-full shadow-sm object-cover ring-2 ring-mint/10"
-                        />
+                <div className="flex items-center gap-4">
+                    {user ? (
+                        <div className="relative group flex-shrink-0 cursor-pointer">
+                            <div className="w-14 h-14 rounded-full overflow-hidden shadow-sm ring-2 ring-mint/20 group-hover:ring-violet-400 transition-all duration-300">
+                                <AvatarUploader
+                                    userId={user.id}
+                                    currentAvatarUrl={user.avatar_url}
+                                    userName={user.name}
+                                    onAvatarUpdated={onAvatarUpdated}
+                                    sizeClass="w-full h-full"
+                                    textSizeClass="text-lg"
+                                />
+                            </div>
+                        </div>
                     ) : (
-                        <div className="w-12 h-12 rounded-full shadow-sm bg-gradient-to-br from-mint-light to-emerald-100 flex items-center justify-center font-bold text-emerald-600 ring-2 ring-mint/10">
-                            {user?.name?.charAt(0).toUpperCase() || "U"}
+                        <div className="w-14 h-14 rounded-full shadow-sm bg-gradient-to-br from-mint-light to-emerald-100 flex items-center justify-center font-bold text-emerald-600 ring-2 ring-mint/10">
+                            U
                         </div>
                     )}
                     <div>
@@ -205,11 +214,6 @@ function CheckInCard({
 // 排行榜 (Leaderboard)
 // ──────────────────────────────────────
 function Leaderboard({ players }: { players: LeaderboardPlayer[] }) {
-    const [localAvatars, setLocalAvatars] = useState<Record<string, string>>({});
-
-    const handleAvatarUpdated = (userId: string, newUrl: string) => {
-        setLocalAvatars(prev => ({ ...prev, [userId]: newUrl }));
-    };
 
     if (players.length === 0) {
         return (
@@ -263,12 +267,17 @@ function Leaderboard({ players }: { players: LeaderboardPlayer[] }) {
                                     >
                                         {isFirst ? <Crown className="w-4 h-4" /> : idx + 1}
                                     </div>
-                                    <AvatarUploader
-                                        userId={player.userId}
-                                        currentAvatarUrl={localAvatars[player.userId] ?? player.avatar_url}
-                                        userName={player.emoji}
-                                        onAvatarUpdated={(newUrl) => handleAvatarUpdated(player.userId, newUrl)}
-                                    />
+                                    {player.avatar_url ? (
+                                        <img
+                                            src={player.avatar_url}
+                                            alt={player.name}
+                                            className="w-9 h-9 rounded-full shadow-sm object-cover ring-1 ring-white"
+                                        />
+                                    ) : (
+                                        <div className="w-9 h-9 rounded-full shadow-sm bg-gray-100 flex items-center justify-center font-bold text-gray-400 ring-1 ring-white">
+                                            {player.emoji}
+                                        </div>
+                                    )}
                                     <span className="font-bold text-gray-700 text-sm ml-1 truncate">
                                         {player.name}
                                     </span>
@@ -387,6 +396,7 @@ export function HomeClient({
             <UserProfileCard
                 user={currentUserProfile}
                 onSignOut={handleSignOut}
+                onAvatarUpdated={() => router.refresh()}
             />
 
             <CheckInCard
