@@ -36,7 +36,7 @@ interface HomeClientProps {
     initialPlayers: LeaderboardPlayer[];
     initialUsers: Pick<User, "id" | "name" | "avatar_url">[];
     serverError: string | null;
-    currentUserId: string | null;
+    currentUserProfile: Pick<User, "id" | "name" | "avatar_url"> | null;
 }
 
 // ──────────────────────────────────────
@@ -71,10 +71,10 @@ function Header({ onSignOut }: { onSignOut: () => void }) {
 // 打卡区 (Check-in Card)
 // ──────────────────────────────────────
 function CheckInCard({
-    currentUserId,
+    currentUserProfile,
     onCheckInSuccess,
 }: {
-    currentUserId: string | null;
+    currentUserProfile: Pick<User, "id" | "name" | "avatar_url"> | null;
     onCheckInSuccess: () => void;
 }) {
     const supabase = createClient();
@@ -82,8 +82,8 @@ function CheckInCard({
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleCheckIn = useCallback(async () => {
-        if (!currentUserId) {
-            toast.error("您尚未登录");
+        if (!currentUserProfile) {
+            toast.error("您尚未登录或未绑定业务身份");
             return;
         }
         const weightNum = parseFloat(weight);
@@ -97,7 +97,7 @@ function CheckInCard({
         try {
             const { error } = await supabase.from("check_ins").upsert(
                 {
-                    user_id: currentUserId,
+                    user_id: currentUserProfile.id,
                     record_date: new Date().toISOString().split("T")[0],
                     record_weight: weightNum,
                 },
@@ -115,7 +115,7 @@ function CheckInCard({
         } finally {
             setIsSubmitting(false);
         }
-    }, [currentUserId, weight, onCheckInSuccess]);
+    }, [currentUserProfile, weight, onCheckInSuccess]);
 
     return (
         <section className="mx-5 mt-6 p-6 bg-white rounded-3xl shadow-sm border border-gray-100/80">
@@ -127,6 +127,23 @@ function CheckInCard({
             </div>
 
             <div className="space-y-4">
+                {/* 身份识别区 */}
+                {currentUserProfile && (
+                    <div className="flex items-center gap-3 bg-gray-50/80 p-3 rounded-2xl border border-gray-100 mb-2">
+                        {currentUserProfile.avatar_url ? (
+                            <img src={currentUserProfile.avatar_url} alt={currentUserProfile.name} className="w-10 h-10 rounded-full shadow-sm object-cover" />
+                        ) : (
+                            <div className="w-10 h-10 rounded-full shadow-sm bg-gradient-to-br from-violet-200 to-pink-200 flex items-center justify-center font-bold text-violet-600">
+                                {currentUserProfile.name.charAt(0).toUpperCase()}
+                            </div>
+                        )}
+                        <div>
+                            <p className="text-xs text-gray-400 font-medium">当前打卡身份</p>
+                            <p className="text-sm font-bold text-gray-700">{currentUserProfile.name}</p>
+                        </div>
+                    </div>
+                )}
+
                 {/* 体重输入 */}
                 <div className="relative">
                     <Input
@@ -290,7 +307,7 @@ export function HomeClient({
     initialPlayers,
     initialUsers,
     serverError,
-    currentUserId,
+    currentUserProfile,
 }: HomeClientProps) {
     const router = useRouter();
     const supabase = createClient();
@@ -346,7 +363,7 @@ export function HomeClient({
         <div className="pb-6">
             <Header onSignOut={handleSignOut} />
             <CheckInCard
-                currentUserId={currentUserId}
+                currentUserProfile={currentUserProfile}
                 onCheckInSuccess={handleCheckInSuccess}
             />
             <Leaderboard players={initialPlayers} />

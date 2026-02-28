@@ -88,11 +88,20 @@ export default async function Home() {
   let players: LeaderboardPlayer[] = [];
   let users: Pick<User, "id" | "name" | "avatar_url">[] = [];
   let serverError: string | null = null;
-  let currentUserId: string | null = null;
+  let currentUserProfile: Pick<User, "id" | "name" | "avatar_url"> | null = null;
 
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    currentUserId = user?.id ?? null;
+    if (user) {
+      const { data: mappedUser } = await supabase
+        .from("users")
+        .select("id, name, avatar_url")
+        .eq("auth_id", user.id)
+        .single();
+      if (mappedUser) {
+        currentUserProfile = mappedUser;
+      }
+    }
     [players, users] = await Promise.all([fetchLeaderboard(supabase), fetchUsers(supabase)]);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "未知错误";
@@ -104,7 +113,7 @@ export default async function Home() {
       initialPlayers={players}
       initialUsers={users}
       serverError={serverError}
-      currentUserId={currentUserId}
+      currentUserProfile={currentUserProfile}
     />
   );
 }
