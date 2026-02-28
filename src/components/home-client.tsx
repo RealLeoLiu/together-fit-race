@@ -42,27 +42,19 @@ interface HomeClientProps {
 // ──────────────────────────────────────
 // Header
 // ──────────────────────────────────────
-function Header({ onSignOut }: { onSignOut: () => void }) {
+function Header() {
     return (
-        <header className="pt-10 pb-2 px-6 flex items-center justify-between">
-            <div className="flex-1"></div>
-            <div className="text-center flex-1">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                    <Sparkles className="w-6 h-6 text-cream-yellow" />
-                    <h1 className="text-2xl font-extrabold tracking-tight text-gray-800">
-                        TogetherFit Race
-                    </h1>
-                    <Sparkles className="w-6 h-6 text-cream-yellow" />
-                </div>
-                <p className="text-sm text-gray-400 font-semibold">
-                    多人减脂马拉松 · 一起变更好 💪
-                </p>
+        <header className="pt-10 pb-2 px-6 flex flex-col items-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+                <Sparkles className="w-6 h-6 text-cream-yellow" />
+                <h1 className="text-2xl font-extrabold tracking-tight text-gray-800">
+                    TogetherFit Race
+                </h1>
+                <Sparkles className="w-6 h-6 text-cream-yellow" />
             </div>
-            <div className="flex-1 flex justify-end">
-                <Button variant="ghost" size="sm" onClick={onSignOut} className="text-gray-400 hover:text-orange-500">
-                    退出
-                </Button>
-            </div>
+            <p className="text-sm text-gray-400 font-semibold text-center">
+                多人减脂马拉松 · 一起变更好 💪
+            </p>
         </header>
     );
 }
@@ -73,9 +65,11 @@ function Header({ onSignOut }: { onSignOut: () => void }) {
 function CheckInCard({
     currentUserProfile,
     onCheckInSuccess,
+    onSignOut,
 }: {
     currentUserProfile: Pick<User, "id" | "name" | "avatar_url"> | null;
     onCheckInSuccess: () => void;
+    onSignOut: () => void;
 }) {
     const supabase = createClient();
     const [weight, setWeight] = useState("");
@@ -119,30 +113,47 @@ function CheckInCard({
 
     return (
         <section className="mx-5 mt-6 p-6 bg-white rounded-3xl shadow-sm border border-gray-100/80">
-            <div className="flex items-center gap-2 mb-5">
-                <div className="w-9 h-9 rounded-2xl bg-mint-light flex items-center justify-center">
-                    <Scale className="w-5 h-5 text-emerald-500" />
+            {/* 卡片头部：用户上下文 + 退出按钮 */}
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    {currentUserProfile?.avatar_url ? (
+                        <img
+                            src={currentUserProfile.avatar_url}
+                            alt={currentUserProfile.name}
+                            className="w-10 h-10 rounded-full shadow-sm object-cover ring-2 ring-mint/20"
+                        />
+                    ) : (
+                        <div className="w-10 h-10 rounded-full shadow-sm bg-gradient-to-br from-mint-light to-emerald-100 flex items-center justify-center font-bold text-emerald-600 ring-2 ring-mint/20">
+                            {currentUserProfile?.name?.charAt(0).toUpperCase() || "U"}
+                        </div>
+                    )}
+                    <div>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Welcome back</p>
+                        <h2 className="text-base font-bold text-gray-800 leading-tight">
+                            Hi, {currentUserProfile?.name || "友人"}
+                        </h2>
+                    </div>
                 </div>
-                <h2 className="text-lg font-bold text-gray-700">今日打卡</h2>
+
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onSignOut}
+                    className="h-8 px-3 rounded-full text-xs text-gray-400 hover:text-red-400 hover:bg-red-50 transition-all font-semibold"
+                >
+                    退出
+                </Button>
             </div>
 
             <div className="space-y-4">
-                {/* 身份识别区 */}
-                {currentUserProfile && (
-                    <div className="flex items-center gap-3 bg-gray-50/80 p-3 rounded-2xl border border-gray-100 mb-2">
-                        {currentUserProfile.avatar_url ? (
-                            <img src={currentUserProfile.avatar_url} alt={currentUserProfile.name} className="w-10 h-10 rounded-full shadow-sm object-cover" />
-                        ) : (
-                            <div className="w-10 h-10 rounded-full shadow-sm bg-gradient-to-br from-violet-200 to-pink-200 flex items-center justify-center font-bold text-violet-600">
-                                {currentUserProfile.name.charAt(0).toUpperCase()}
-                            </div>
-                        )}
-                        <div>
-                            <p className="text-xs text-gray-400 font-medium">当前打卡身份</p>
-                            <p className="text-sm font-bold text-gray-700">{currentUserProfile.name}</p>
-                        </div>
+                {/* 打卡标题 */}
+                <div className="flex items-center gap-2 px-1">
+                    <div className="w-5 h-5 rounded-lg bg-mint-light flex items-center justify-center">
+                        <Scale className="w-3 h-3 text-emerald-500" />
                     </div>
-                )}
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">今日打卡</span>
+                </div>
+
 
                 {/* 体重输入 */}
                 <div className="relative">
@@ -361,10 +372,11 @@ export function HomeClient({
 
     return (
         <div className="pb-6">
-            <Header onSignOut={handleSignOut} />
+            <Header />
             <CheckInCard
                 currentUserProfile={currentUserProfile}
                 onCheckInSuccess={handleCheckInSuccess}
+                onSignOut={handleSignOut}
             />
             <Leaderboard players={initialPlayers} />
             <WeightTrendChart
