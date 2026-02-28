@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import { Camera, Loader2 } from "lucide-react";
 import Image from "next/image";
 
@@ -27,6 +27,7 @@ export function AvatarUploader({
     sizeClass = "w-9 h-9",
     textSizeClass = "text-sm",
 }: AvatarUploaderProps) {
+    const supabase = createClient();
     const inputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
     const [localUrl, setLocalUrl] = useState<string | null>(currentAvatarUrl);

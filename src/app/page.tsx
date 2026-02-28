@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import type { LeaderboardPlayer, User } from "@/lib/types";
 import { HomeClient } from "@/components/home-client";
 
@@ -12,7 +12,7 @@ function getProgress(start: number, current: number, goal: number): number {
   return Math.min(Math.max(Math.round(pct), 0), 100);
 }
 
-async function fetchLeaderboard(): Promise<LeaderboardPlayer[]> {
+async function fetchLeaderboard(supabase: any): Promise<LeaderboardPlayer[]> {
   // 1. 获取所有用户
   const { data: users, error: usersErr } = await supabase
     .from("users")
@@ -65,13 +65,13 @@ async function fetchLeaderboard(): Promise<LeaderboardPlayer[]> {
         progressPct: getProgress(startWeight, currentWeight, goalWeight),
       };
     })
-    .filter((p): p is LeaderboardPlayer => p !== null)
-    .sort((a, b) => b.progressPct - a.progressPct);
+    .filter((p: LeaderboardPlayer | null): p is LeaderboardPlayer => p !== null)
+    .sort((a: LeaderboardPlayer, b: LeaderboardPlayer) => b.progressPct - a.progressPct);
 
   return players;
 }
 
-async function fetchUsers(): Promise<Pick<User, "id" | "name" | "avatar_url">[]> {
+async function fetchUsers(supabase: any): Promise<Pick<User, "id" | "name" | "avatar_url">[]> {
   const { data, error } = await supabase
     .from("users")
     .select("id, name, avatar_url")
@@ -84,12 +84,16 @@ async function fetchUsers(): Promise<Pick<User, "id" | "name" | "avatar_url">[]>
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  const supabase = await createClient();
   let players: LeaderboardPlayer[] = [];
   let users: Pick<User, "id" | "name" | "avatar_url">[] = [];
   let serverError: string | null = null;
+  let currentUserId: string | null = null;
 
   try {
-    [players, users] = await Promise.all([fetchLeaderboard(), fetchUsers()]);
+    const { data: { user } } = await supabase.auth.getUser();
+    currentUserId = user?.id ?? null;
+    [players, users] = await Promise.all([fetchLeaderboard(supabase), fetchUsers(supabase)]);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "未知错误";
     serverError = message;
@@ -100,6 +104,7 @@ export default async function Home() {
       initialPlayers={players}
       initialUsers={users}
       serverError={serverError}
+      currentUserId={currentUserId}
     />
   );
 }

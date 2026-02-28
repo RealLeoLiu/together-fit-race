@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import type { LeaderboardPlayer, User, CheckIn } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -36,24 +36,33 @@ interface HomeClientProps {
     initialPlayers: LeaderboardPlayer[];
     initialUsers: Pick<User, "id" | "name" | "avatar_url">[];
     serverError: string | null;
+    currentUserId: string | null;
 }
 
 // ──────────────────────────────────────
 // Header
 // ──────────────────────────────────────
-function Header() {
+function Header({ onSignOut }: { onSignOut: () => void }) {
     return (
-        <header className="pt-10 pb-2 px-6 text-center">
-            <div className="flex items-center justify-center gap-2 mb-1">
-                <Sparkles className="w-6 h-6 text-cream-yellow" />
-                <h1 className="text-2xl font-extrabold tracking-tight text-gray-800">
-                    TogetherFit Race
-                </h1>
-                <Sparkles className="w-6 h-6 text-cream-yellow" />
+        <header className="pt-10 pb-2 px-6 flex items-center justify-between">
+            <div className="flex-1"></div>
+            <div className="text-center flex-1">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                    <Sparkles className="w-6 h-6 text-cream-yellow" />
+                    <h1 className="text-2xl font-extrabold tracking-tight text-gray-800">
+                        TogetherFit Race
+                    </h1>
+                    <Sparkles className="w-6 h-6 text-cream-yellow" />
+                </div>
+                <p className="text-sm text-gray-400 font-semibold">
+                    多人减脂马拉松 · 一起变更好 💪
+                </p>
             </div>
-            <p className="text-sm text-gray-400 font-semibold">
-                多人减脂马拉松 · 一起变更好 💪
-            </p>
+            <div className="flex-1 flex justify-end">
+                <Button variant="ghost" size="sm" onClick={onSignOut} className="text-gray-400 hover:text-orange-500">
+                    退出
+                </Button>
+            </div>
         </header>
     );
 }
@@ -62,22 +71,19 @@ function Header() {
 // 打卡区 (Check-in Card)
 // ──────────────────────────────────────
 function CheckInCard({
-    users,
-    selectedUserId,
-    onUserChange,
+    currentUserId,
     onCheckInSuccess,
 }: {
-    users: Pick<User, "id" | "name" | "avatar_url">[];
-    selectedUserId: string;
-    onUserChange: (userId: string) => void;
+    currentUserId: string | null;
     onCheckInSuccess: () => void;
 }) {
+    const supabase = createClient();
     const [weight, setWeight] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleCheckIn = useCallback(async () => {
-        if (!selectedUserId) {
-            toast.error("请先选择打卡用户");
+        if (!currentUserId) {
+            toast.error("您尚未登录");
             return;
         }
         const weightNum = parseFloat(weight);
@@ -91,7 +97,7 @@ function CheckInCard({
         try {
             const { error } = await supabase.from("check_ins").upsert(
                 {
-                    user_id: selectedUserId,
+                    user_id: currentUserId,
                     record_date: new Date().toISOString().split("T")[0],
                     record_weight: weightNum,
                 },
@@ -109,7 +115,7 @@ function CheckInCard({
         } finally {
             setIsSubmitting(false);
         }
-    }, [selectedUserId, weight, onCheckInSuccess]);
+    }, [currentUserId, weight, onCheckInSuccess]);
 
     return (
         <section className="mx-5 mt-6 p-6 bg-white rounded-3xl shadow-sm border border-gray-100/80">
@@ -121,20 +127,6 @@ function CheckInCard({
             </div>
 
             <div className="space-y-4">
-                {/* 用户选择 */}
-                <Select value={selectedUserId} onValueChange={onUserChange}>
-                    <SelectTrigger className="h-12 rounded-2xl bg-gray-50/80 border-gray-200/60">
-                        <SelectValue placeholder="选择打卡用户..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {users.map((u) => (
-                            <SelectItem key={u.id} value={u.id}>
-                                {u.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-
                 {/* 体重输入 */}
                 <div className="relative">
                     <Input
@@ -298,11 +290,10 @@ export function HomeClient({
     initialPlayers,
     initialUsers,
     serverError,
+    currentUserId,
 }: HomeClientProps) {
     const router = useRouter();
-
-    // ── 提升的用户选择状态 ──
-    const [selectedUserId, setSelectedUserId] = useState("");
+    const supabase = createClient();
 
     // ── 趋势图数据 ──
     const [trendData, setTrendData] = useState<CheckIn[]>([]);
@@ -346,13 +337,16 @@ export function HomeClient({
         fetchAllTrends();
     }, [router, fetchAllTrends]);
 
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        router.refresh(); // Middleware will redirect to login
+    };
+
     return (
         <div className="pb-6">
-            <Header />
+            <Header onSignOut={handleSignOut} />
             <CheckInCard
-                users={initialUsers}
-                selectedUserId={selectedUserId}
-                onUserChange={setSelectedUserId}
+                currentUserId={currentUserId}
                 onCheckInSuccess={handleCheckInSuccess}
             />
             <Leaderboard players={initialPlayers} />
