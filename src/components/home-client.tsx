@@ -76,17 +76,16 @@ function UserProfileCard({
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     {user ? (
-                        <div className="relative group flex-shrink-0 cursor-pointer">
-                            <div className="w-14 h-14 rounded-full overflow-hidden shadow-sm ring-2 ring-mint/20 group-hover:ring-violet-400 transition-all duration-300">
-                                <AvatarUploader
-                                    userId={user.id}
-                                    currentAvatarUrl={user.avatar_url}
-                                    userName={user.name}
-                                    onAvatarUpdated={onAvatarUpdated}
-                                    sizeClass="w-full h-full"
-                                    textSizeClass="text-lg"
-                                />
-                            </div>
+                        <div className="relative group flex-shrink-0 cursor-pointer w-14 h-14">
+                            <AvatarUploader
+                                userId={user.id}
+                                currentAvatarUrl={user.avatar_url}
+                                userName={user.name}
+                                onAvatarUpdated={onAvatarUpdated}
+                                sizeClass="w-full h-full"
+                                textSizeClass="text-lg"
+                                className="ring-2 ring-mint/20 group-hover:ring-violet-400 transition-all duration-300"
+                            />
                         </div>
                     ) : (
                         <div className="w-14 h-14 rounded-full shadow-sm bg-gradient-to-br from-mint-light to-emerald-100 flex items-center justify-center font-bold text-emerald-600 ring-2 ring-mint/10">

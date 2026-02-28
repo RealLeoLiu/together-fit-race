@@ -15,6 +15,8 @@ interface AvatarUploaderProps {
     /** Size class, defaults to w-9 h-9 */
     sizeClass?: string;
     textSizeClass?: string;
+    /** Additional classes for the avatar container (e.g. rings) */
+    className?: string;
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -26,6 +28,7 @@ export function AvatarUploader({
     onAvatarUpdated,
     sizeClass = "w-9 h-9",
     textSizeClass = "text-sm",
+    className = "",
 }: AvatarUploaderProps) {
     const supabase = createClient();
     const inputRef = useRef<HTMLInputElement>(null);
@@ -96,15 +99,15 @@ export function AvatarUploader({
 
     if (!hasMounted) {
         return (
-            <div className={`${sizeClass} rounded-full bg-gray-100 animate-pulse`} />
+            <div className={`${sizeClass} rounded-full bg-gray-100 animate-pulse ${className}`} />
         );
     }
 
     return (
-        <div className="relative group flex-shrink-0">
+        <div className={`relative group flex-shrink-0 ${sizeClass}`}>
             {/* Avatar circle */}
             <div
-                className={`${sizeClass} rounded-full overflow-hidden bg-gradient-to-br from-violet-200 to-pink-200 flex items-center justify-center ring-2 ring-white shadow-sm`}
+                className={`w-full h-full rounded-full overflow-hidden bg-gradient-to-br from-violet-200 to-pink-200 flex items-center justify-center shadow-sm ${className || 'ring-2 ring-white'}`}
             >
                 {localUrl ? (
                     <Image
@@ -112,7 +115,7 @@ export function AvatarUploader({
                         alt={userName}
                         width={64}
                         height={64}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover block"
                         unoptimized
                     />
                 ) : (
