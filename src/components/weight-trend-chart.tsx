@@ -208,13 +208,13 @@ export function WeightTrendChart({ checkIns, users, players, isLoading }: Weight
                 </div>
             )}
 
-            {/* 图表: 扩容图表高度 min-h-[400px] */}
+            {/* 图表: 纵向深度扩容，加大物理高度以突显细微波动 */}
             {!isLoading && chartData.length > 0 && (
-                <div className="w-full h-96 min-h-[400px] -ml-4">
+                <div className="w-full h-[500px] -ml-4">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart
                             data={chartData}
-                            margin={{ top: 20, right: 20, left: 0, bottom: 0 }}
+                            margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
                         >
                             <CartesianGrid
                                 vertical={false}
