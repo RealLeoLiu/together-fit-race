@@ -60,16 +60,60 @@ function Header() {
 }
 
 // ──────────────────────────────────────
+// 个人名片 (User Profile Card)
+// ──────────────────────────────────────
+function UserProfileCard({
+    user,
+    onSignOut,
+}: {
+    user: Pick<User, "id" | "name" | "avatar_url"> | null;
+    onSignOut: () => void;
+}) {
+    return (
+        <section className="mx-5 mt-6 p-5 bg-white rounded-3xl shadow-sm border border-gray-100/80">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    {user?.avatar_url ? (
+                        <img
+                            src={user.avatar_url}
+                            alt={user.name}
+                            className="w-12 h-12 rounded-full shadow-sm object-cover ring-2 ring-mint/10"
+                        />
+                    ) : (
+                        <div className="w-12 h-12 rounded-full shadow-sm bg-gradient-to-br from-mint-light to-emerald-100 flex items-center justify-center font-bold text-emerald-600 ring-2 ring-mint/10">
+                            {user?.name?.charAt(0).toUpperCase() || "U"}
+                        </div>
+                    )}
+                    <div>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Welcome back</p>
+                        <h2 className="text-lg font-bold text-gray-800 leading-tight">
+                            Hi, {user?.name || "友人"}
+                        </h2>
+                    </div>
+                </div>
+
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onSignOut}
+                    className="h-9 px-4 rounded-full text-xs text-gray-400 hover:text-red-400 hover:bg-red-50 transition-all font-semibold border border-transparent hover:border-red-100"
+                >
+                    退出
+                </Button>
+            </div>
+        </section>
+    );
+}
+
+// ──────────────────────────────────────
 // 打卡区 (Check-in Card)
 // ──────────────────────────────────────
 function CheckInCard({
     currentUserProfile,
     onCheckInSuccess,
-    onSignOut,
 }: {
     currentUserProfile: Pick<User, "id" | "name" | "avatar_url"> | null;
     onCheckInSuccess: () => void;
-    onSignOut: () => void;
 }) {
     const supabase = createClient();
     const [weight, setWeight] = useState("");
@@ -112,49 +156,15 @@ function CheckInCard({
     }, [currentUserProfile, weight, onCheckInSuccess]);
 
     return (
-        <section className="mx-5 mt-6 p-6 bg-white rounded-3xl shadow-sm border border-gray-100/80">
-            {/* 卡片头部：用户上下文 + 退出按钮 */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    {currentUserProfile?.avatar_url ? (
-                        <img
-                            src={currentUserProfile.avatar_url}
-                            alt={currentUserProfile.name}
-                            className="w-10 h-10 rounded-full shadow-sm object-cover ring-2 ring-mint/20"
-                        />
-                    ) : (
-                        <div className="w-10 h-10 rounded-full shadow-sm bg-gradient-to-br from-mint-light to-emerald-100 flex items-center justify-center font-bold text-emerald-600 ring-2 ring-mint/20">
-                            {currentUserProfile?.name?.charAt(0).toUpperCase() || "U"}
-                        </div>
-                    )}
-                    <div>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Welcome back</p>
-                        <h2 className="text-base font-bold text-gray-800 leading-tight">
-                            Hi, {currentUserProfile?.name || "友人"}
-                        </h2>
-                    </div>
+        <section className="mx-5 p-6 bg-white rounded-3xl shadow-sm border border-gray-100/80">
+            <div className="flex items-center gap-2 mb-6">
+                <div className="w-9 h-9 rounded-2xl bg-mint-light flex items-center justify-center">
+                    <Scale className="w-5 h-5 text-emerald-500" />
                 </div>
-
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onSignOut}
-                    className="h-8 px-3 rounded-full text-xs text-gray-400 hover:text-red-400 hover:bg-red-50 transition-all font-semibold"
-                >
-                    退出
-                </Button>
+                <h2 className="text-lg font-bold text-gray-700">今日打卡</h2>
             </div>
 
-            <div className="space-y-4">
-                {/* 打卡标题 */}
-                <div className="flex items-center gap-2 px-1">
-                    <div className="w-5 h-5 rounded-lg bg-mint-light flex items-center justify-center">
-                        <Scale className="w-3 h-3 text-emerald-500" />
-                    </div>
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">今日打卡</span>
-                </div>
-
-
+            <div className="space-y-5">
                 {/* 体重输入 */}
                 <div className="relative">
                     <Input
@@ -371,20 +381,29 @@ export function HomeClient({
     };
 
     return (
-        <div className="pb-6">
+        <div className="pb-10 flex flex-col gap-6">
             <Header />
+
+            <UserProfileCard
+                user={currentUserProfile}
+                onSignOut={handleSignOut}
+            />
+
             <CheckInCard
                 currentUserProfile={currentUserProfile}
                 onCheckInSuccess={handleCheckInSuccess}
-                onSignOut={handleSignOut}
             />
+
             <Leaderboard players={initialPlayers} />
-            <WeightTrendChart
-                checkIns={trendData}
-                users={initialUsers}
-                players={initialPlayers}
-                isLoading={isLoadingTrend}
-            />
+
+            <div className="mx-5">
+                <WeightTrendChart
+                    checkIns={trendData}
+                    users={initialUsers}
+                    players={initialPlayers}
+                    isLoading={isLoadingTrend}
+                />
+            </div>
         </div>
     );
 }
