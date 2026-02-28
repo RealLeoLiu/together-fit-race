@@ -128,14 +128,20 @@ export function WeightTrendChart({ checkIns, users, players, isLoading }: Weight
 
     const chartData = Object.values(dataMap);
 
-    // 2. 计算 Y 轴域 (只根据被选中的用户数据计算边界)
+    // 2. 计算 Y 轴域 (包括所选用户的打卡数据 + 所选用户的目标体重)
     const activeWeights = checkIns
         .filter(c => selectedUsers.includes(c.user_id))
         .map(c => Number(c.record_weight));
 
-    // 如果也没有选中用户，就用一个默认范围
-    const yMin = activeWeights.length > 0 ? Math.floor(Math.min(...activeWeights) - 2) : 0;
-    const yMax = activeWeights.length > 0 ? Math.ceil(Math.max(...activeWeights) + 2) : 100;
+    const activeGoals = (players || [])
+        .filter(p => selectedUsers.includes(p.userId))
+        .map(p => Number(p.goalWeight));
+
+    const allValues = [...activeWeights, ...activeGoals];
+
+    // 如果没有选中任何用户数据或目标，就用一个默认范围
+    const yMin = allValues.length > 0 ? Math.floor(Math.min(...allValues) - 2) : 0;
+    const yMax = allValues.length > 0 ? Math.ceil(Math.max(...allValues) + 2) : 100;
 
     const showEmpty = !isLoading && chartData.length === 0;
 
