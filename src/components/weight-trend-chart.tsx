@@ -146,7 +146,7 @@ export function WeightTrendChart({ checkIns, users, players, isLoading }: Weight
     const showEmpty = !isLoading && chartData.length === 0;
 
     return (
-        <section className="mx-5 mt-5 mb-8 p-6 bg-white rounded-3xl shadow-sm border border-gray-100/80">
+        <section className="w-full bg-white rounded-3xl shadow-sm p-6 border border-gray-100/80">
             {/* 标题行 */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">

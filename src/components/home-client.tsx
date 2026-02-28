@@ -44,7 +44,7 @@ interface HomeClientProps {
 // ──────────────────────────────────────
 function Header() {
     return (
-        <header className="pt-10 pb-2 px-6 flex flex-col items-center">
+        <header className="pt-10 pb-2 flex flex-col items-center">
             <div className="flex items-center justify-center gap-2 mb-1">
                 <Sparkles className="w-6 h-6 text-cream-yellow" />
                 <h1 className="text-2xl font-extrabold tracking-tight text-gray-800">
@@ -70,7 +70,7 @@ function UserProfileCard({
     onSignOut: () => void;
 }) {
     return (
-        <section className="mx-5 mt-6 p-5 bg-white rounded-3xl shadow-sm border border-gray-100/80">
+        <section className="w-full bg-white rounded-3xl shadow-sm p-6 border border-gray-100/80">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     {user?.avatar_url ? (
@@ -156,7 +156,7 @@ function CheckInCard({
     }, [currentUserProfile, weight, onCheckInSuccess]);
 
     return (
-        <section className="mx-5 p-6 bg-white rounded-3xl shadow-sm border border-gray-100/80">
+        <section className="w-full bg-white rounded-3xl shadow-sm p-6 border border-gray-100/80">
             <div className="flex items-center gap-2 mb-6">
                 <div className="w-9 h-9 rounded-2xl bg-mint-light flex items-center justify-center">
                     <Scale className="w-5 h-5 text-emerald-500" />
@@ -213,7 +213,7 @@ function Leaderboard({ players }: { players: LeaderboardPlayer[] }) {
 
     if (players.length === 0) {
         return (
-            <section className="mx-5 mt-5 mb-8 p-8 bg-white rounded-3xl shadow-sm border border-gray-100/80 text-center">
+            <section className="w-full bg-white rounded-3xl shadow-sm p-8 border border-gray-100/80 text-center">
                 <div className="flex items-center justify-center gap-2 mb-5">
                     <div className="w-9 h-9 rounded-2xl bg-macaron-pink-light flex items-center justify-center">
                         <Trophy className="w-5 h-5 text-pink-400" />
@@ -231,7 +231,7 @@ function Leaderboard({ players }: { players: LeaderboardPlayer[] }) {
     }
 
     return (
-        <section className="mx-5 mt-5 mb-8 p-6 bg-white rounded-3xl shadow-sm border border-gray-100/80">
+        <section className="w-full bg-white rounded-3xl shadow-sm p-6 border border-gray-100/80">
             <div className="flex items-center gap-2 mb-5">
                 <div className="w-9 h-9 rounded-2xl bg-macaron-pink-light flex items-center justify-center">
                     <Trophy className="w-5 h-5 text-pink-400" />
@@ -381,7 +381,7 @@ export function HomeClient({
     };
 
     return (
-        <div className="pb-10 flex flex-col gap-6">
+        <div className="pb-10 flex flex-col gap-6 px-5">
             <Header />
 
             <UserProfileCard
@@ -396,14 +396,12 @@ export function HomeClient({
 
             <Leaderboard players={initialPlayers} />
 
-            <div className="mx-5">
-                <WeightTrendChart
-                    checkIns={trendData}
-                    users={initialUsers}
-                    players={initialPlayers}
-                    isLoading={isLoadingTrend}
-                />
-            </div>
+            <WeightTrendChart
+                checkIns={trendData}
+                users={initialUsers}
+                players={initialPlayers}
+                isLoading={isLoadingTrend}
+            />
         </div>
     );
 }
