@@ -157,38 +157,45 @@ export function WeightTrendChart({ checkIns, users, players, isLoading }: Weight
                 </div>
             </div>
 
-            {/* 用户筛选器 (Pill tags) */}
-            {!isLoading && activeUsers.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-6">
-                    {activeUsers.map((user, idx) => {
-                        const isSelected = selectedUsers.includes(user.id);
-                        const color = USER_COLORS[idx % USER_COLORS.length];
-                        return (
-                            <button
-                                key={user.id}
-                                onClick={() => toggleUser(user.id)}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold transition-all duration-300 border
-                                    ${isSelected
-                                        ? "bg-white text-gray-800 shadow-sm"
-                                        : "bg-gray-50 text-gray-400 border-transparent hover:bg-gray-100"
-                                    }`}
-                                style={{
-                                    borderColor: isSelected ? color : "transparent"
-                                }}
-                            >
-                                <div
-                                    className="w-2.5 h-2.5 rounded-full transition-transform duration-300"
-                                    style={{
-                                        backgroundColor: isSelected ? color : "#cbd5e1",
-                                        transform: isSelected ? "scale(1)" : "scale(0.8)"
-                                    }}
-                                />
-                                {user.name}
-                            </button>
-                        );
-                    })}
+            {/* 用户筛选器 (Pill tags)及单位说明 */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
+                {/* 单位外置说明 */}
+                <div className="text-xs font-semibold text-gray-400 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">
+                    单位：斤
                 </div>
-            )}
+
+                {!isLoading && activeUsers.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {activeUsers.map((user, idx) => {
+                            const isSelected = selectedUsers.includes(user.id);
+                            const color = USER_COLORS[idx % USER_COLORS.length];
+                            return (
+                                <button
+                                    key={user.id}
+                                    onClick={() => toggleUser(user.id)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold transition-all duration-300 border
+                                    ${isSelected
+                                            ? "bg-white text-gray-800 shadow-sm"
+                                            : "bg-gray-50 text-gray-400 border-transparent hover:bg-gray-100"
+                                        }`}
+                                    style={{
+                                        borderColor: isSelected ? color : "transparent"
+                                    }}
+                                >
+                                    <div
+                                        className="w-2.5 h-2.5 rounded-full transition-transform duration-300"
+                                        style={{
+                                            backgroundColor: isSelected ? color : "#cbd5e1",
+                                            transform: isSelected ? "scale(1)" : "scale(0.8)"
+                                        }}
+                                    />
+                                    {user.name}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
 
             {/* 加载中 */}
             {isLoading && (
@@ -235,7 +242,7 @@ export function WeightTrendChart({ checkIns, users, players, isLoading }: Weight
                                 tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 600 }}
                                 tickCount={6}
                                 hide={false}
-                                tickFormatter={(value) => `${Number(value).toFixed(2)} 斤`}
+                                tickFormatter={(value) => String(Math.round(value))}
                             />
                             <Tooltip
                                 content={<CustomTooltip />}

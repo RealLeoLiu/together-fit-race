@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import confetti from "canvas-confetti";
 import { createClient } from "@/lib/supabase/client";
 import type { LeaderboardPlayer, User, CheckIn } from "@/lib/types";
 import { Input } from "@/components/ui/input";
@@ -303,6 +304,32 @@ function UserProfileCard({
 }
 
 // ──────────────────────────────────────
+// 连胜下降计算算法
+// ──────────────────────────────────────
+function calculateDropStreak(records: CheckIn[]): number {
+    if (!records || records.length < 2) return 0;
+
+    // Ensure sorted from newest to oldest
+    const sorted = [...records].sort(
+        (a, b) => new Date(b.record_date).getTime() - new Date(a.record_date).getTime()
+    );
+
+    let streak = 0;
+    // Iterate and compare each record to the one before it (older record)
+    for (let i = 0; i < sorted.length - 1; i++) {
+        const newerWeight = Number(sorted[i].record_weight);
+        const olderWeight = Number(sorted[i + 1].record_weight);
+
+        if (newerWeight < olderWeight) {
+            streak++;
+        } else {
+            break; // Stop climbing if we stagnated or gained weight
+        }
+    }
+    return streak;
+}
+
+// ──────────────────────────────────────
 // 打卡区 (Check-in Card)
 // ──────────────────────────────────────
 function CheckInCard({
@@ -341,7 +368,53 @@ function CheckInCard({
 
             if (error) throw new Error(error.message);
 
-            toast.success("打卡成功！继续加油 🎉");
+            // Fetch latest records to calculate streak
+            const { data: recordsData, error: fetchError } = await supabase
+                .from("check_ins")
+                .select("*")
+                .eq("user_id", currentUserProfile.id)
+                .order("record_date", { ascending: false });
+
+            if (!fetchError && recordsData) {
+                const streak = calculateDropStreak(recordsData);
+                if (streak >= 2) {
+                    toast.success(`🎉 太棒了！你的体重已经连续下降 ${streak} 天了！继续保持！🔥`, {
+                        duration: 5000,
+                        className: "bg-gradient-to-r from-amber-100 to-amber-50 border-amber-200 text-amber-800 text-base font-bold shadow-lg"
+                    });
+
+                    // Trigger multi-burst dopamine confetti
+                    const duration = 3000;
+                    const end = Date.now() + duration;
+
+                    const frame = () => {
+                        confetti({
+                            particleCount: 5,
+                            angle: 60,
+                            spread: 55,
+                            origin: { x: 0 },
+                            colors: ['#26ccff', '#a25afd', '#ff5e7e', '#88ff5a', '#fcff42', '#ffa62d', '#ff36ff']
+                        });
+                        confetti({
+                            particleCount: 5,
+                            angle: 120,
+                            spread: 55,
+                            origin: { x: 1 },
+                            colors: ['#26ccff', '#a25afd', '#ff5e7e', '#88ff5a', '#fcff42', '#ffa62d', '#ff36ff']
+                        });
+
+                        if (Date.now() < end) {
+                            requestAnimationFrame(frame);
+                        }
+                    };
+                    frame();
+                } else {
+                    toast.success("打卡成功！继续加油 🎉");
+                }
+            } else {
+                toast.success("打卡成功！继续加油 🎉");
+            }
+
             setWeight("");
             onCheckInSuccess();
         } catch (err: unknown) {
