@@ -210,7 +210,10 @@ export function WeightTrendChart({ checkIns, users, players, isLoading }: Weight
 
             {/* 图表: 纵向深度扩容，加大物理高度以突显细微波动 */}
             {!isLoading && chartData.length > 0 && (
-                <div className="w-full h-[500px] -ml-4">
+                <div className="w-full h-[500px] -ml-4 relative">
+                    <div className="absolute top-5 left-[1.35rem] text-[11px] font-[600] text-[#94a3b8] z-10">
+                        单位：斤
+                    </div>
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart
                             data={chartData}
@@ -249,7 +252,8 @@ export function WeightTrendChart({ checkIns, users, players, isLoading }: Weight
                                 align="right"
                                 iconType="circle"
                                 wrapperStyle={{
-                                    paddingBottom: "20px",
+                                    paddingBottom: "30px",
+                                    marginTop: "-4px",
                                     fontSize: "12px",
                                     fontWeight: "bold",
                                     color: "#64748b"
@@ -304,7 +308,6 @@ export function WeightTrendChart({ checkIns, users, players, isLoading }: Weight
                             })}
                         </LineChart>
                     </ResponsiveContainer>
-                    <div className="text-[10px] font-bold text-gray-400 text-left -mt-4 mb-4 ml-8">单位：斤</div>
                 </div>
             )}
         </section>
