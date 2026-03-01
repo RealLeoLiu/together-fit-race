@@ -72,7 +72,7 @@ function CustomTooltip({
                             <span className="text-sm font-bold text-gray-600">{entry.name}</span>
                         </div>
                         <span className="text-sm font-extrabold text-gray-800">
-                            {entry.value} <span className="text-[10px] text-gray-400">kg</span>
+                            {Number(entry.value).toFixed(2)} <span className="text-[10px] text-gray-400">斤</span>
                         </span>
                     </div>
                 ))}
@@ -122,7 +122,7 @@ export function WeightTrendChart({ checkIns, users, players, isLoading }: Weight
         const label = formatDateLabel(c.record_date);
         const user = users.find(u => u.id === c.user_id);
         if (user && dataMap[label]) {
-            dataMap[label][user.name] = Number(c.record_weight);
+            dataMap[label][user.name] = Number((Number(c.record_weight) * 2).toFixed(2));
         }
     });
 
@@ -131,11 +131,11 @@ export function WeightTrendChart({ checkIns, users, players, isLoading }: Weight
     // 2. 计算 Y 轴域 (包括所选用户的打卡数据 + 所选用户的目标体重)
     const activeWeights = checkIns
         .filter(c => selectedUsers.includes(c.user_id))
-        .map(c => Number(c.record_weight));
+        .map(c => Number((Number(c.record_weight) * 2).toFixed(2)));
 
     const activeGoals = (players || [])
         .filter(p => selectedUsers.includes(p.userId))
-        .map(p => Number(p.goalWeight));
+        .map(p => Number((Number(p.goalWeight) * 2).toFixed(2)));
 
     const allValues = [...activeWeights, ...activeGoals];
 
@@ -235,6 +235,7 @@ export function WeightTrendChart({ checkIns, users, players, isLoading }: Weight
                                 tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 600 }}
                                 tickCount={6}
                                 hide={false}
+                                tickFormatter={(value) => `${Number(value).toFixed(2)} 斤`}
                             />
                             <Tooltip
                                 content={<CustomTooltip />}
@@ -285,7 +286,7 @@ export function WeightTrendChart({ checkIns, users, players, isLoading }: Weight
                                     player?.goalWeight ? (
                                         <ReferenceLine
                                             key={`ref-${user.id}`}
-                                            y={player.goalWeight}
+                                            y={Number((player.goalWeight * 2).toFixed(2))}
                                             stroke={color}
                                             strokeDasharray="5 5"
                                             strokeOpacity={0.6}

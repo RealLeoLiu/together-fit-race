@@ -99,11 +99,22 @@ function GoalSettingModal({
         fetchGoal();
     }, [isOpen, userId, supabase]);
 
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     const handleSave = async () => {
-        const initial = parseFloat(initialWeight);
-        const goal = parseFloat(goalWeight);
+        const initial = Number(initialWeight);
+        const goal = Number(goalWeight);
 
         if (isNaN(initial) || isNaN(goal) || initial <= 0 || goal <= 0) {
             toast.error("请输入有效的体重数值");
@@ -156,7 +167,7 @@ function GoalSettingModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-start pt-[15vh] px-4 bg-black/40 backdrop-blur-sm">
             <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="p-6">
                     <div className="flex items-center justify-between mb-6">
@@ -180,6 +191,7 @@ function GoalSettingModal({
                                 <Input
                                     type="number"
                                     placeholder="85.0"
+                                    step="0.01"
                                     value={initialWeight}
                                     onChange={e => setInitialWeight(e.target.value)}
                                     className="h-12 rounded-2xl bg-gray-50/50"
@@ -190,6 +202,7 @@ function GoalSettingModal({
                                 <Input
                                     type="number"
                                     placeholder="65.0"
+                                    step="0.01"
                                     value={goalWeight}
                                     onChange={e => setGoalWeight(e.target.value)}
                                     className="h-12 rounded-2xl bg-gray-50/50"
@@ -308,7 +321,7 @@ function CheckInCard({
             toast.error("您尚未登录或未绑定业务身份");
             return;
         }
-        const weightNum = parseFloat(weight);
+        const weightNum = Number(weight);
         if (isNaN(weightNum) || weightNum <= 0) {
             toast.error("请输入有效的体重数值");
             return;
@@ -354,7 +367,7 @@ function CheckInCard({
                     <Input
                         type="number"
                         placeholder="输入今日体重 (kg)"
-                        step="0.1"
+                        step="0.01"
                         value={weight}
                         onChange={(e) => setWeight(e.target.value)}
                         className="h-13 text-base rounded-2xl bg-gray-50/80 border-gray-200/60
@@ -462,10 +475,10 @@ function Leaderboard({ players }: { players: LeaderboardPlayer[] }) {
                                         className={`text-xl font-extrabold ${isFirst ? "text-amber-600" : "text-gray-800"
                                             }`}
                                     >
-                                        {player.currentWeight}
+                                        {(player.currentWeight * 2).toFixed(2)}
                                     </span>
                                     <span className="text-xs text-gray-400 font-semibold">
-                                        / {player.goalWeight} kg
+                                        / {(player.goalWeight * 2).toFixed(2)} 斤
                                     </span>
                                 </div>
                             </div>
@@ -489,13 +502,13 @@ function Leaderboard({ players }: { players: LeaderboardPlayer[] }) {
                             <p className="text-xs text-gray-400 font-medium">
                                 已减{" "}
                                 <span className="text-gray-600 font-bold">
-                                    {(player.startWeight - player.currentWeight).toFixed(1)}
+                                    {((player.startWeight - player.currentWeight) * 2).toFixed(2)}
                                 </span>{" "}
-                                kg · 还需减{" "}
+                                斤 · 还需减{" "}
                                 <span className="text-gray-600 font-bold">
-                                    {(player.currentWeight - player.goalWeight).toFixed(1)}
+                                    {((player.currentWeight - player.goalWeight) * 2).toFixed(2)}
                                 </span>{" "}
-                                kg
+                                斤
                             </p>
                         </div>
                     );
