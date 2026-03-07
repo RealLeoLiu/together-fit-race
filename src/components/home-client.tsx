@@ -45,16 +45,19 @@ interface HomeClientProps {
 // ──────────────────────────────────────
 function Header() {
     return (
-        <header className="pt-10 pb-2 flex flex-col items-center">
-            <div className="flex items-center justify-center gap-2 mb-1">
-                <Sparkles className="w-6 h-6 text-cream-yellow" />
+        <header className="pt-10 pb-3 flex flex-col items-center">
+            <div className="flex items-center justify-center gap-3 mb-2">
+                <img
+                    src="/logo.png"
+                    alt="TogetherFit Race Logo"
+                    className="w-12 h-12 rounded-full shadow-md object-cover ring-2 ring-white/60"
+                />
                 <h1 className="text-2xl font-extrabold tracking-tight text-gray-800">
-                    TogetherFit Race
+                    Fit Race
                 </h1>
-                <Sparkles className="w-6 h-6 text-cream-yellow" />
             </div>
             <p className="text-sm text-gray-400 font-semibold text-center">
-                多人减脂马拉松 · 一起变更好 💪
+                减脂马拉松 · 一起变更好 💪
             </p>
         </header>
     );

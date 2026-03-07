@@ -10,9 +10,13 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "TogetherFit Race — 多人减脂马拉松",
+  title: "Fit Race | 减脂马拉松",
   description:
-    "带有游戏化竞赛性质的多人体重打卡 Web App，一起变更好！",
+    "带有游戏化竞赛性质的减脂马拉松 Web App，一起变更好！",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({
